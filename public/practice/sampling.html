@@ -1,0 +1,254 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="../d3.min.js" type="text/javascript"></script>
+    <title>D3 quadtree sampling</title>
+    <style>
+      #numcandidate {
+        display: block;
+        width: 200px;
+      }
+
+      #numSamples {
+        display: block;
+        width: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      function bestCandidateSampler(width, height, numCandidates, numSamplesMax) {
+        let numSamples = 0;
+
+        let random = Math.random,
+          data = d3.range( height > width ? height : width ).map(el => (
+            [random() * width, random() * height]
+          ));
+
+        let quadtree = d3.quadtree()
+          .extent([[0, 0], [width, height]])
+          .addAll(data);
+
+        return function() {
+          if (++numSamples > numSamplesMax) return;
+          let bestCandidate, bestDistance = 0;
+          for (let i = 0; i < numCandidates; ++i) {
+            let c = [Math.random() * width, Math.random() * height],
+              d = distance(quadtree.find(c[0], c[1]), c);
+            if (d > bestDistance) {
+              bestDistance = d;
+              bestCandidate = c;
+            }
+          }
+          quadtree.add(bestCandidate);
+          return bestCandidate;
+        };
+
+        function distance(a, b) {
+          let dx = a[0] - b[0],
+            dy = a[1] - b[1];
+          return dx * dx + dy * dy;
+        }
+      }
+    </script>
+    <form>
+      <input id="numcandidate" type="number" min=1 max=100 placeholder="Number of candidates" value=10 />
+      <input id="numSamples" type="number" min=100 max=10000 step=100 placeholder="Number of samples" value=2000 />
+    </form>
+    <div id="best-candidate-sampling"></div>
+    <script>
+      (function() {
+        const margin = 3,
+          width = 600 - (2 * margin),
+          height = 800 - (2 * margin);
+
+        let numSamplesPerFrame = 10,
+          timerActive = 0;
+
+        let numCandidates = parseInt(d3.select("#numcandidate").property("value"));
+        let numSamples = parseInt(d3.select("#numSamples").property("value"));
+
+        let p = d3.select('#best-candidate-sampling')
+          .on('click', click);
+
+        let svg = p.append('svg')
+            .attr('width', width + (2 * margin))
+            .attr('height', height + (2 * margin))
+          .append('g')
+            .attr('transform', 'translate(' + margin + ',' + margin + ')');
+
+        p.append('button')
+                .text('▶ Play');
+
+        d3.select("#numcandidate").on("input", function() {
+          numCandidates = parseInt(d3.select("#numcandidate").property("value"));
+        });
+
+        d3.select("#numSamples").on("input", function(val) {
+          numSamples = parseInt(d3.select("#numSamples").property("value"));
+        });
+
+        function click() {
+          const sample = bestCandidateSampler(width, height, numCandidates, numSamples),
+                timer = ++timerActive;
+
+          console.log("num candidates: ", numCandidates);
+          console.log("num samples: ", numSamples);
+          svg.selectAll('circle').remove();
+          p.classed('animation--playing', true);
+
+          d3.timer(function() {
+            if (timerActive !== timer) return true;
+            for (let i = 0; i < numSamplesPerFrame; ++i) {
+              let s = sample();
+              if (!s) return p.classed('animation--playing', false), true;
+
+              svg.append('circle')
+                  .attr('cx', s[0])
+                  .attr('cy', s[1])
+                  .attr('r', 0)
+                .transition()
+                  .attr('r', 2);
+            }
+          });
+        }
+      })();
+    </script>
+    <p id="best-candidate-explainer"></p>
+    <script>
+      (function() {
+
+        var width = 600,
+          height = 800;
+
+        var numCandidates = 10,
+          numSamplesMax = 1000;
+
+        var p = d3.select("#best-candidate-explainer")
+          .on("click", click);
+
+        var svg = p.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+        var gCandidate = svg.append("g")
+          .attr("class", "candidate");
+
+        var gPoint = svg.append("g")
+          .attr("class", "point");
+
+        p.append("button")
+          .text("▶ Play")
+          .on("click", click);
+
+        function click() {
+          var numSamples = 1;
+
+          let random = Math.random,
+              data = d3.range( height > width ? height : width ).map(el => (
+                [random() * width, random() * height]
+              ));
+
+          var quadtree = d3.quadtree()
+            .extent([[0, 0], [width, height]])
+            .addAll(data);
+
+          gCandidate.selectAll("*")
+            .interrupt()
+            .remove();
+
+          gPoint.selectAll("*")
+            .interrupt()
+            .remove();
+
+          gPoint.append("circle")
+            .attr("r", 3.5)
+            .attr("cx", quadtree.point[0])
+            .attr("cy", quadtree.point[1]);
+
+          p
+            .classed("animation--playing", true);
+
+          (function nextPoint() {
+            var i = 0,
+              maxDistance = -Infinity,
+              bestCandidate = null;
+
+            (function nextCandidate() {
+              if (++i > numCandidates) {
+                gCandidate.selectAll("*").transition()
+                  .style("opacity", 0)
+                  .remove();
+
+                gPoint.append("circle")
+                  .attr("r", 3.5)
+                  .attr("cx", bestCandidate.__data__[0])
+                  .attr("cy", bestCandidate.__data__[1]);
+
+                quadtree.add(bestCandidate.__data__);
+
+                if (++numSamples < numSamplesMax) beforeVisible(p.node(), nextPoint);
+                else p.classed("animation--playing", false);
+
+                return;
+              }
+
+              var x = Math.random() * width,
+                y = Math.random() * height,
+                closest = quadtree.find(x, y),
+                dx = closest[0] - x,
+                dy = closest[1] - y,
+                distance = Math.sqrt(dx * dx + dy * dy);
+
+              var g = gCandidate.insert("g", "*")
+                .datum([x, y])
+                .attr("class", "candidate--current");
+
+              g.append("circle")
+                .attr("class", "search")
+                .attr("r", 3.5)
+                .attr("cx", x)
+                .attr("cy", y);
+
+              g.append("line")
+                .attr("class", "search")
+                .attr("x1", x)
+                .attr("y1", y)
+                .attr("x2", x)
+                .attr("y2", y);
+
+              g.append("circle")
+                .attr("class", "point")
+                .attr("r", 3.5)
+                .attr("cx", x)
+                .attr("cy", y);
+
+      var t = g.transition()
+          .duration(750)
+          .each("end", function() {
+            if (distance > maxDistance) {
+              d3.select(bestCandidate).attr("class", null);
+              d3.select(this.parentNode.appendChild(this)).attr("class", "candidate--best");
+              bestCandidate = this;
+              maxDistance = distance;
+            } else {
+              d3.select(this).attr("class", null);
+            }
+            nextCandidate();
+          });
+
+      t.select("circle.search")
+          .attr("r", distance);
+
+      t.select("line.search")
+          .attr("x2", closest[0])
+          .attr("y2", closest[1]);
+    })();
+  })();
+}
+
+})()
+    </script>
+  </body>
+</html>

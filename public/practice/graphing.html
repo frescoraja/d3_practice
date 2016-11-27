@@ -1,0 +1,484 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="../d3.min.js" type="text/javascript"></script>
+    <title>D3 visualize sorting</title>
+    <style>
+      .animation {
+        position: relative;
+        cursor: pointer;
+      }
+
+      .animation--playing button.player {
+        opacity: 0.50;
+      }
+
+      button {
+        display: block;
+        cursor: pointer;
+        padding: 5px 10px;
+        margin: 5px 15px;
+        border-radius: 5px;
+        border: solid 1px #ccc;
+        color: #333;
+        background: #fff;
+      }
+
+      button:not(.animation--playing) {
+        transition: opacity 250ms linear;
+        transition-delay: 2s;
+      }
+
+      button:hover {
+        border-color: #000;
+        color: #000;
+        box-shadow: 0 2px 4px
+        rgba(0,0,0,.2);
+      }
+
+      button:focus {
+        outline: none;
+      }
+
+      button:active {
+        box-shadow: inset 0 0 4px
+        rgba(0,0,0,.2) !important;
+      }
+
+      .line {
+        stroke-width: 2px;
+      }
+
+      svg text {
+        font: 10px sans-serif;
+        margin: -20px;
+      }
+
+      .shuffle-bias .row text {
+        text-anchor: end;
+      }
+
+      pre {
+        background-color: #eee;
+        width: 50%;
+      }
+
+      .javascript {
+        font-family: "Menlo", monospace;
+        line-height: 1.5em;
+      }
+
+      .javascript .keyword {
+        font-weight: 700;
+        color: #1d3e9c;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Shuffle Bias</h2>
+    <h4>Bad shuffle</h4>
+    <pre>
+      <code class="javascript">
+        <span class="keyword">function</span> sort(arr) {
+          <span class="keyword">return</span> arr.sort(<span class="keyword">function</span>(a, b) {
+            <span class="keyword">return</span> <em>Math</em>.random() - 0.5;
+          });
+        }
+      </code>
+    </pre>
+    <p class="animation" id="shuffle"></p>
+    <p class="shuffle-bias" id="bad-random-sort-comparator-shuffle"></p>
+    <script>
+      (function() {
+        const n = 100;
+        const margin = { top: 20, left: 30, bottom: 30, right: 20 },
+          height = 200 - (margin.top + margin.bottom),
+          width = 1000 - (margin.left + margin.right);
+
+        const x = d3.scalePoint()
+          .domain(d3.range(n))
+          .range([0, width]);
+
+        const a = d3.scaleLinear()
+          .domain([0, n - 1])
+          .range([-45, 45]);
+
+        const colorScale = d3.scaleLinear()
+          .domain([-24, 0, 24])
+          .range(["black", "#82e30f", "white"]);
+
+        const p = d3.select("#shuffle");
+
+        const svg = p.append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .style("background-color", "#ddd")
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        let gLine = svg.append("g")
+          .attr("class", "line");
+
+        let numbers = d3.range(n);
+
+        let line = gLine.selectAll("line")
+          .data(numbers, function(d) { return d; })
+          .enter().append("line")
+          .attr("class", "line line--inactive")
+          .attr("transform", transform)
+          .attr("stroke", function(d, i) {
+            return colorScale(d - i);
+          })
+          .attr("y2", -height);
+
+        const shuffler = p.append("button")
+          .classed("shuffler", true)
+          .text("Shuffle!")
+          .on("click", clickShuffle);
+
+        function transform(d, i) {
+          return "translate(" + x(i) + "," + height + ")rotate(" + a(d) + ")";
+        }
+
+        function clickShuffle() {
+          badShuffle(numbers);
+
+          line.data(numbers, function(d) { return d; })
+            .transition()
+            .attr("transform", transform)
+            .attr("stroke", function(d, i) {
+              return colorScale(d - i);
+            })
+
+          shuffler.classed("shuffled", true);
+        }
+
+        function badShuffle(arr) {
+          return arr.sort(function(a, b) {
+            return Math.random() - 0.5;
+          });
+        }
+      })();
+    </script>
+    <script>
+      (function() {
+        const margin = { top: 20, right: 0, bottom: 0, left: 20 },
+          width = 720,
+          height = 720;
+        const n = 60,
+          m = 10000;
+
+        const x = d3.scaleBand().domain(d3.range(n)).range([0, width]);
+        const z = d3.scaleLog().domain([m / n / 4, m / n, m / n * 4])
+          .interpolate(d3.interpolateCubehelix)
+          .range([d3.hsl("black"), d3.hsl("#1d7e9c"), d3.hsl("red")])
+          .clamp(true);
+        const p = d3.select("#bad-random-sort-comparator-shuffle");
+        const svg = p.append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+        const shuffler = p.append("button")
+          .text("Bad Shuffle")
+          .on("click", generateResults);
+
+        function generateResults() {
+          let result = getResultArray();
+          for (let i = 0; i < m; i++) {
+            let array  = d3.range(n);
+            let shuffled = badShuffle(array);
+            for (let j = 0; j < n; j++) {
+              let item = shuffled[j];
+              result[item][j] = result[item][j] ? result[item][j] + 1 : 1;
+            }
+          }
+
+          ready(null, result);
+        }
+
+        function getResultArray() {
+          let store = [];
+          for (let i = 0; i < n; i++) {
+            store[i] = [];
+          }
+
+          return store;
+        }
+
+        function badShuffle(array) {
+          return array.sort((a, b) => (Math.random() - 0.5));
+        }
+
+        function ready(err, matrix) {
+          if (err) return console.log(err);
+
+          let row = svg.selectAll(".row")
+            .data(matrix, function(d) { return d; })
+            .enter().append("g")
+              .attr("class", "row")
+              .attr("transform", function(d, i) {
+                return "translate(0," + x(i) + ")";
+              });
+
+          row.selectAll(".cell")
+            .data(function(d) { return d; })
+          .enter().append("rect")
+            .style("shape-rendering", "crispEdges")
+            .attr("class", "cell")
+            .attr("x", function(d, i) { return x(i); })
+            .attr("width", x.bandwidth())
+            .attr("height", x.bandwidth())
+            .style("fill", z);
+
+          row.append("line")
+            .attr("x2", width);
+
+          row.append("text")
+            .attr("x", x(0) - 6)
+            .attr("y", x.bandwidth() / 2)
+            .attr("dy", ".32em")
+            .text(function(d, i) { return i; });
+
+          let column = svg.selectAll(".column")
+              .data(matrix)
+            .enter().append("g")
+              .attr("class", "column")
+              .attr("transform", function(d, i) {
+                return "translate(" + x(i) + ",0)";
+              });
+
+          column.append("line")
+            .attr("x1", -width);
+
+          column.append("text")
+            .attr("x", 6 - x(0))
+            .attr("y", x.bandwidth() / 2)
+            .attr("dy", ".32em")
+            .attr("transform", "rotate(-90)")
+            .text(function(d, i) { return i; });
+        }
+      })();
+    </script>
+    <h4>Good shuffle</h4>
+    <pre>
+      <code class="javascript">
+        <span class="keyword">function</span> shuffle(arr) {
+          let n = arr.length, t, i;
+          while (n) {
+            i = <em>Math</em>.random() * n-- | 0;
+            t = arr[n];
+            arr[n] = arr[i];
+            arr[i] = t;
+          }
+
+          <span class="keyword">return</span> arr;
+        }
+      </code>
+    </pre>
+    <p class="animation" id="good-shuffle">
+    <p class="shuffle-bias" id="random-sort-comparator-shuffle"></p>
+    <script>
+      (function() {
+        const n = 100;
+        const margin = { top: 20, left: 30, bottom: 30, right: 20 },
+          height = 200 - (margin.top + margin.bottom),
+          width = 1000 - (margin.left + margin.right);
+
+        const x = d3.scalePoint()
+          .domain(d3.range(n))
+          .range([0, width]);
+
+        const a = d3.scaleLinear()
+          .domain([0, n - 1])
+          .range([-45, 45]);
+
+        const colorScale = d3.scaleLinear()
+          .domain([-24, 0, 24])
+          .range(["black", "#82e30f", "white"]);
+
+        const p = d3.select("#good-shuffle");
+
+        const svg = p.append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .style("background-color", "#ddd")
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        let gLine = svg.append("g")
+          .attr("class", "line");
+
+        let numbers = d3.range(n);
+
+        let line = gLine.selectAll("line")
+          .data(numbers, function(d) { return d; })
+          .enter().append("line")
+          .attr("class", "line line--inactive")
+          .attr("transform", transform)
+          .attr("stroke", function(d, i) {
+            return colorScale(d - i);
+          })
+          .attr("y2", -height);
+
+        const shuffler = p.append("button")
+          .classed("shuffler", true)
+          .text("Shuffle!")
+          .on("click", clickShuffle);
+
+        function transform(d, i) {
+          return "translate(" + x(i) + "," + height + ")rotate(" + a(d) + ")";
+        }
+
+        function clickShuffle() {
+          goodShuffle(numbers);
+
+          line.data(numbers, function(d) { return d; })
+            .transition()
+            .attr("transform", transform)
+            .attr("stroke", function(d, i) {
+              return colorScale(d - i);
+            })
+
+          shuffler.classed("shuffled", true);
+        }
+
+        function goodShuffle(arr) {
+          let n = arr.length, t, i;
+          while(n) {
+            i = Math.random() * n-- | 0;
+            t = arr[n];
+            arr[n] = arr[i];
+            arr[i] = t;
+          }
+
+          return arr;
+        }
+      })();
+    </script>
+    <script>
+      (function() {
+        const margin = { top: 20, right: 0, bottom: 0, left: 20 },
+              width = 720,
+              height = 720;
+        const n = 60,
+              m = 10000;
+
+        const x = d3.scaleBand().domain(d3.range(n)).range([0, width]);
+
+        const z = d3.scaleLog().domain([m / n / 3, m / n, m / n * 3])
+          .interpolate(d3.interpolateCubehelix)
+          .range([d3.hsl("black"), d3.hsl("#1d7e9c"), d3.hsl("red")])
+          .clamp(true);
+
+        const p = d3.select("#random-sort-comparator-shuffle");
+
+        const svg = p.append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        p.append("button")
+          .text("Generate Graph")
+          .on("click", generateResults);
+
+        function generateResults() {
+          let result = getResultArray();
+          for (let i = 0; i < m; i++) {
+            let array = d3.range(n);
+            let shuffled = goodShuffle(array);
+            for (let j = 0; j < n; j++) {
+              let item = shuffled[j];
+              result[item][j] = result[item][j] ? result[item][j] + 1 : 1;
+            }
+          }
+          ready(null, result);
+        }
+
+        function getResultArray() {
+          let store = [];
+          for (let i = 0; i < n; i++) {
+            store[i] = [];
+          }
+          return store;
+        }
+
+        function ready(err, matrix) {
+          if (err) return console.log(err);
+
+          let row = svg.selectAll(".row")
+            .data(matrix, function(d) { return d; })
+            .enter().append("g")
+              .attr("class", "row")
+              .attr("transform", function(d, i) {
+                return "translate(0," + x(i) + ")";
+              });
+
+          row.selectAll(".cell")
+            .data(function(d) { return d; })
+          .enter().append("rect")
+            .style("shape-rendering", "crispEdges")
+            .attr("class", "cell")
+            .attr("x", function(d, i) { return x(i); })
+            .attr("width", x.bandwidth())
+            .attr("height", x.bandwidth())
+            .style("fill", z);
+
+          row.append("line")
+            .attr("x2", width);
+
+          row.append("text")
+            .attr("x", x(0) - 6)
+            .attr("y", x.bandwidth() / 2)
+            .attr("dy", ".32em")
+            .text(function(d, i) { return i; });
+
+          let column = svg.selectAll(".column")
+              .data(matrix)
+            .enter().append("g")
+              .attr("class", "column")
+              .attr("transform", function(d, i) {
+                return "translate(" + x(i) + ",0)";
+              });
+
+          column.append("line")
+            .attr("x1", -width);
+
+          column.append("text")
+            .attr("x", 6 - x(0))
+            .attr("y", x.bandwidth() / 2)
+            .attr("dy", ".32em")
+            .attr("transform", "rotate(-90)")
+            .text(function(d, i) { return i; });
+        }
+
+        function Shuffler(arr) {
+          let n = arr.length, t, i;
+          while(n) {
+            i = Math.random() * n-- | 0;
+            t = arr[n];
+            arr[n] = arr[i];
+            arr[i] = t;
+          }
+
+          return arr;
+        }
+        function goodShuffle(array) {
+          for (let i = 0; i < array.length; i++) {
+            let r = i + Math.random() * (array.length - i) | 0;
+            let t = array[i];
+            array[i] = array[r];
+            array[r] = t;
+          }
+
+          return array;
+        }
+      })();
+    </script>
+  </body>
+</html>
+

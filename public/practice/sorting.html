@@ -1,0 +1,416 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="../d3.min.js" type="text/javascript"></script>
+    <title>D3 visualize sorting</title>
+    <style>
+      .animation {
+        position: relative;
+        cursor: pointer;
+      }
+
+      .animation--playing button.player {
+        opacity: 0.50;
+      }
+
+      .animation button {
+        display: block;
+        cursor: pointer;
+        padding: 5px 10px;
+        margin: 5px 15px;
+        border-radius: 5px;
+        border: solid 1px #ccc;
+        color: #333;
+        background: #fff;
+      }
+
+      .animation:not(.animation--playing) button.player
+      {
+        transition: opacity 250ms linear;
+        transition-delay: 2s;
+      }
+
+      .animation button:hover {
+        border-color: #000;
+        color: #000;
+        box-shadow: 0 2px 4px
+        rgba(0,0,0,.2);
+      }
+
+      .animation button:focus {
+        outline: none;
+      }
+
+      .animation--playing button,
+      .animation:active button {
+        box-shadow: inset 0 0 4px
+        rgba(0,0,0,.2) !important;
+      }
+
+      .line {
+        stroke-width: 2px;
+      }
+
+      .line--active {
+        stroke: red;
+        stroke-width: 3px;
+      }
+
+      .line--inactive {
+        stroke: black;
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>BubbleSort</h2>
+    <p class="animation" id="bubblesort"></p>
+    <script>
+      (function() {
+        const n = 70;
+        const margin = { top: 40, right: 60, bottom: 40, left: 60 },
+          width = 960 - margin.left - margin.right,
+          height = 180 - margin.top - margin.bottom;
+
+        const x = d3.scalePoint()
+          .domain(d3.range(n))
+          .range([0, width]);
+
+        const a = d3.scaleLinear()
+          .domain([0, n - 1])
+          .range([-40, 40]);
+
+        const colorScale = d3.scaleLinear()
+          .domain([-24, 0, 24])
+          .range(["red", "#1d7e9c", "white"]);
+
+        const p = d3.select("#bubblesort");
+
+        const svg = p.append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .style("background-color", "#ddd")
+          .append("g")
+          .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+
+        let gLine = svg.append("g")
+          .attr("class", "line");
+
+        let numbers = d3.range(n);
+
+        let line = gLine.selectAll("line")
+          .data(numbers, function(d) { return d; })
+          .enter().append("line")
+          .attr("class", "line")
+          .attr("transform", transform)
+          .attr("stroke", function(d, i) {
+            return colorScale(d-i);
+          })
+          .attr("y2", -height);
+
+        const player = p.append("button")
+          .classed("player", true)
+          .text("▶ Play")
+          .on("click", clickPlay);
+
+        const shuffler = p.append("button")
+          .classed("shuffler", true)
+          .text("Shuffle!")
+          .on("click", clickShuffle);
+
+        function clickShuffle() {
+          if (p.attr("class").indexOf("playing") > -1) {
+            return;
+          }
+          shuffle(numbers);
+
+          line
+            .data(numbers, function(d) { return d; })
+            .transition()
+            .attr("transform", transform)
+            .attr("stroke", function(d, i) {
+              return colorScale(d-i);
+            })
+
+          shuffler.classed("shuffled", true);
+        }
+
+        function clickPlay() {
+          if (shuffler.attr("class").indexOf("shuffled") === -1 ||
+            p.attr("class").indexOf("playing") > -1) {
+            return;
+          }
+
+          p.classed("animation--playing", true);
+          line.data(numbers)
+            .attr("transform", transform)
+            .attr("stroke", function(d, i) {
+              return colorScale(d - i);
+            });
+
+          let actions = bubblesort(numbers.slice()).reverse();
+          let transition = svg.transition()
+            .duration(150)
+            .on("start",
+              function start() {
+                let action = actions.pop();
+                if (action) {
+                let i = action[0],
+                  j = action[1],
+                  li = line._groups[0][i],
+                  lj = line._groups[0][j];
+                let diffI = li.__data__ - j;
+                let diffJ = lj.__data__ - i;
+                line._groups[0][i] = lj;
+                line._groups[0][j] = li;
+                transition.each(function() {
+                  line.transition()
+                    .attr("transform", transform)
+                    .attr("stroke", function(d, idx) {
+                      return colorScale(d - idx);
+                    });
+                });
+              }
+              if (actions.length) {
+                transition = transition.transition().on("start", start);
+              } else {
+                transition.on("end", function() {
+                  p.classed("animation--playing", false);
+                });
+              }
+              });
+        }
+
+        function transform(d, i) {
+          return "translate(" + x(i) + "," + height + ")rotate(" + a(d) + ")";
+        }
+
+        function shuffle(array) {
+          let n = array.length, i, t;
+          while(n) {
+            i = Math.random() * n--;
+            t = array[n];
+            array[n] = array[i];
+            array[i] = t;
+          }
+          return array;
+        }
+
+        function bubblesort(array) {
+          var actions = [];
+
+          function sort() {
+            var sorted = false;
+            while(!sorted) {
+              sorted = true;
+              for (let i = 0; i < array.length; i++) {
+                if (array[i] > array[i + 1]) {
+                  swap(i,  i+1);
+                  sorted = false;
+                }
+              }
+            }
+          }
+
+          function swap(i, j) {
+            var t = array[i];
+            array[i] = array[j];
+            array[j] = t;
+            actions.push([i, j]);
+          }
+          sort();
+          return actions;
+        }
+
+        function shuffle(array) {
+          for (let i = 0; i < array.length; i++) {
+            let rand = (Math.random() * (array.length - i - 1)) | 0;
+            let t = array[i];
+            array[i] = array[rand];
+            array[rand] = t;
+          }
+
+          return array;
+        }
+
+      })();
+    </script>
+    <h2>QuickSort</h2>
+    <p class="animation" id="quicksort"></p>
+    <script>
+      (function() {
+        const n = 70;
+        const margin = { top: 40, right: 60, bottom: 40, left: 60 },
+          width = 960 - margin.left - margin.right,
+          height = 180 - margin.top - margin.bottom;
+
+        const x = d3.scalePoint()
+          .domain(d3.range(n))
+          .range([0, width]);
+
+        const a = d3.scaleLinear()
+          .domain([0, n - 1])
+          .range([-40, 40]);
+
+        const colorScale = d3.scaleLinear()
+          .domain([-24, 0, 24])
+          .range(["red", "#c09e6a", "white"])
+
+        const p = d3.select("#quicksort");
+
+        const svg = p.append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .style("background-color", "#ddd")
+          .append("g")
+          .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+
+        let gLine = svg.append("g")
+          .attr("class", "line")
+
+        let numbers = d3.range(n);
+
+        let line = gLine.selectAll("line")
+          .data(numbers, function(d) { return d; })
+          .enter().append("line")
+          .attr("class", "line")
+          .attr("transform", transform)
+          .attr("stroke", function(d, i) {
+            return colorScale(d-i);
+          })
+          .attr("y2", -height);
+
+        const player = p.append("button")
+          .classed("player", true)
+          .text("▶ Play")
+          .on("click", clickPlay);
+
+        const shuffler = p.append("button")
+          .classed("shuffler", true)
+          .text("Shuffle!")
+          .on("click", clickShuffle);
+
+        function clickShuffle() {
+          if (p.attr("class").indexOf("playing") > -1) {
+            return;
+          }
+          shuffle(numbers);
+
+          line
+            .data(numbers, function(d) { return d; })
+            .transition()
+            .attr("transform", transform)
+            .attr("stroke", function(d, i) {
+              return colorScale(d-i);
+            })
+
+          shuffler.classed("shuffled", true);
+        }
+
+        function clickPlay() {
+          if (shuffler.attr("class").indexOf("shuffled") === -1 ||
+            p.attr("class").indexOf("playing") > -1) {
+            return;
+          }
+
+          p.classed("animation--playing", true);
+          line.data(numbers)
+            .attr("transform", transform)
+            .attr("stroke", function(d, i) {
+              return colorScale(d - i);
+            });
+
+          let actions = quicksort(numbers.slice()).reverse();
+          let transition = svg.transition()
+            .duration(250)
+            .on("start", function start() {
+              let action = actions.pop();
+              switch (action.type) {
+                case "swap":
+                  let i = action[0],
+                  j = action[1],
+                  li = line._groups[0][i],
+                  lj = line._groups[0][j];
+                  line._groups[0][i] = lj;
+                  line._groups[0][j] = li;
+                  transition.each(function() {
+                    line.transition()
+                      .attr("transform", transform)
+                      .attr("stroke", function(d, i) {
+                        return colorScale(d - i);
+                      });
+                  });
+                  break;
+                case "partition":
+                  line.attr("class", function(d, i) {
+                    return i === action.pivot ? "line--active"
+                      : action.left <= i && i < action.right ? "line--inactive"
+                      : null;
+                  });
+                  break;
+              }
+              if (actions.length) {
+                transition = transition.transition().on("start", start);
+              } else {
+                transition.on("end", function() {
+                  line.attr("class", "line--inactive");
+                  p.classed("animation--playing", false);
+                  shuffler.classed("shuffled", false);
+                });
+              }
+            });
+        }
+
+        function transform(d, i) {
+          return "translate(" + x(i) + "," + height + ")rotate(" + a(d) + ")";
+        }
+
+        function shuffle(array) {
+          let n = array.length, i, t;
+          while(n) {
+            i = Math.random() * n-- | 0;
+            t = array[n];
+            array[n] = array[i];
+            array[i] = t;
+          }
+          return array;
+        }
+
+        function quicksort(array) {
+          var actions = [];
+
+          function partition(left, right, pivot) {
+            var v = array[pivot];
+            swap(pivot, --right);
+            for (var i = left; i < right; ++i) if (array[i] < v) swap(i, left++);
+            swap(left, right);
+            return left;
+          }
+
+          function swap(i, j) {
+            if (i === j) return;
+            var t = array[i];
+            array[i] = array[j];
+            array[j] = t;
+            actions.push({type: "swap", "0": i, "1": j});
+          }
+
+          function recurse(left, right) {
+            if (left < right - 1) {
+              var pivot = (left + right) >> 1;
+              actions.push({type: "partition", "left": left, "pivot": pivot, "right": right});
+              pivot = partition(left, right, pivot);
+              recurse(left, pivot);
+              recurse(pivot + 1, right);
+            }
+          }
+
+          recurse(0, array.length);
+          return actions;
+        }
+      })();
+    </script>
+  </body>
+</html>
+
