@@ -192,7 +192,7 @@
             let shuffled = badShuffle(array);
             for (let j = 0; j < n; j++) {
               let item = shuffled[j];
-							result[item] = result[item] || [];
+              result[item] = result[item] || [];
               result[item][j] = result[item][j] ? result[item][j] + 1 : 1;
             }
           }
@@ -384,12 +384,12 @@
             let shuffled = goodShuffle(array);
             for (let j = 0; j < n; j++) {
               let item = shuffled[j];
-							result[item] = result[item] || [];
+              result[item] = result[item] || [];
               result[item][j] = result[item][j] ? result[item][j] + 1 : 1;
             }
           }
 
-					ready(null, result);
+          ready(null, result);
         }
 
         function ready(err, matrix) {
@@ -437,7 +437,7 @@
           column.append("text")
             .attr("x", 6 - x(0))
             .attr("y", x.bandwidth() / 2)
-						.attr("dy", ".32em")
+            .attr("dy", ".32em")
             .attr("transform", "rotate(-90)")
             .text(function(d, i) { return i; });
         }

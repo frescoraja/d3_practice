@@ -346,7 +346,7 @@
                   line.attr("class", function(d, i) {
                     return i === action.pivot ? "line--active"
                       : action.left <= i && i < action.right ? "line--inactive"
-											: null;
+                      : null;
                   });
                   break;
               }
@@ -366,9 +366,9 @@
           return "translate(" + x(i) + "," + height + ")rotate(" + a(d) + ")";
         }
 
-				function swapline(d, newI) {
-					return "translate(" + x(newI) + "," + height + ")rotate(" + a(d) + ")";
-				}
+        function swapline(d, newI) {
+          return "translate(" + x(newI) + "," + height + ")rotate(" + a(d) + ")";
+        }
 
         function shuffle(array) {
           let n = array.length, i, t;
@@ -387,12 +387,12 @@
           function partition(left, right, pivot) {
             var v = array[pivot];
             swap(pivot, --right);
-						for (var i = left; i < right; ++i) {
-							if (array[i] <= v) {
-								swap(i, left++);
-							}
-						}
-						swap(left, right);
+            for (var i = left; i < right; ++i) {
+              if (array[i] <= v) {
+                swap(i, left++);
+              }
+            }
+            swap(left, right);
             return left;
           }
 
@@ -406,7 +406,7 @@
 
           function recurse(left, right) {
             if (left < right - 1) {
-							var pivot = (left + right) >> 1;
+              var pivot = (left + right) >> 1;
               actions.push({type: "partition", "left": left, "pivot": pivot, "right": right});
               pivot = partition(left, right, pivot);
               recurse(left, pivot);
