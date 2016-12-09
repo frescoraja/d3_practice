@@ -61,7 +61,6 @@
 
       pre {
         background-color: #eee;
-        width: 50%;
       }
 
       .javascript {
@@ -167,12 +166,12 @@
           width = 720,
           height = 720;
         const n = 60,
-          m = 10000;
+          m = 5000;
 
         const x = d3.scaleBand().domain(d3.range(n)).range([0, width]);
-        const z = d3.scaleLog().domain([m / n / 4, m / n, m / n * 4])
+        const z = d3.scaleLog().domain([m / n / 3, m / n, m / n * 3])
           .interpolate(d3.interpolateCubehelix)
-          .range([d3.hsl("black"), d3.hsl("#1d7e9c"), d3.hsl("red")])
+          .range([d3.hsl("black"), d3.hsl("#82e30f"), d3.hsl("red")])
           .clamp(true);
         const p = d3.select("#bad-random-sort-comparator-shuffle");
         const svg = p.append("svg")
@@ -187,26 +186,18 @@
           .on("click", generateResults);
 
         function generateResults() {
-          let result = getResultArray();
+          let result = [];
           for (let i = 0; i < m; i++) {
             let array  = d3.range(n);
             let shuffled = badShuffle(array);
             for (let j = 0; j < n; j++) {
               let item = shuffled[j];
+							result[item] = result[item] || [];
               result[item][j] = result[item][j] ? result[item][j] + 1 : 1;
             }
           }
 
           ready(null, result);
-        }
-
-        function getResultArray() {
-          let store = [];
-          for (let i = 0; i < n; i++) {
-            store[i] = [];
-          }
-
-          return store;
         }
 
         function badShuffle(array) {
@@ -284,7 +275,7 @@
     <script>
       (function() {
         const n = 100;
-        const margin = { top: 20, left: 30, bottom: 30, right: 20 },
+        const margin = { top: 30, left: 30, bottom: 30, right: 20 },
           height = 200 - (margin.top + margin.bottom),
           width = 1000 - (margin.left + margin.right);
 
@@ -298,7 +289,7 @@
 
         const colorScale = d3.scaleLinear()
           .domain([-24, 0, 24])
-          .range(["black", "#82e30f", "white"]);
+          .range(["black", "#2300ff", "white"]);
 
         const p = d3.select("#good-shuffle");
 
@@ -365,13 +356,13 @@
               width = 720,
               height = 720;
         const n = 60,
-              m = 10000;
+              m = 5000;
 
         const x = d3.scaleBand().domain(d3.range(n)).range([0, width]);
 
-        const z = d3.scaleLog().domain([m / n / 3, m / n, m / n * 3])
+        const z = d3.scaleLog().domain([m / n / 5, m / n, m / n * 5])
           .interpolate(d3.interpolateCubehelix)
-          .range([d3.hsl("black"), d3.hsl("#1d7e9c"), d3.hsl("red")])
+          .range([d3.hsl("black"), d3.hsl("#2300ff"), d3.hsl("red")])
           .clamp(true);
 
         const p = d3.select("#random-sort-comparator-shuffle");
@@ -387,28 +378,23 @@
           .on("click", generateResults);
 
         function generateResults() {
-          let result = getResultArray();
+          let result = [];
           for (let i = 0; i < m; i++) {
             let array = d3.range(n);
             let shuffled = goodShuffle(array);
             for (let j = 0; j < n; j++) {
               let item = shuffled[j];
+							result[item] = result[item] || [];
               result[item][j] = result[item][j] ? result[item][j] + 1 : 1;
             }
           }
-          ready(null, result);
-        }
 
-        function getResultArray() {
-          let store = [];
-          for (let i = 0; i < n; i++) {
-            store[i] = [];
-          }
-          return store;
+					ready(null, result);
         }
 
         function ready(err, matrix) {
           if (err) return console.log(err);
+
 
           let row = svg.selectAll(".row")
             .data(matrix, function(d) { return d; })
@@ -451,7 +437,7 @@
           column.append("text")
             .attr("x", 6 - x(0))
             .attr("y", x.bandwidth() / 2)
-            .attr("dy", ".32em")
+						.attr("dy", ".32em")
             .attr("transform", "rotate(-90)")
             .text(function(d, i) { return i; });
         }
