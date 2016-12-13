@@ -104,8 +104,8 @@
           .range([-45, 45]);
 
         const colorScale = d3.scaleLinear()
-          .domain([-24, 0, 24])
-          .range(["black", "#82e30f", "white"]);
+          .domain([-(n - 1), 0, (n - 1)])
+          .range(["white", "#82e30f", "black"]);
 
         const p = d3.select("#shuffle");
 
@@ -288,8 +288,8 @@
           .range([-45, 45]);
 
         const colorScale = d3.scaleLinear()
-          .domain([-24, 0, 24])
-          .range(["black", "#2300ff", "white"]);
+          .domain([-(n - 1), 0, (n - 1)])
+          .range(["white", "#2300ff", "black"]);
 
         const p = d3.select("#good-shuffle");
 

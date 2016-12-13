@@ -8,35 +8,44 @@
   <body>
     <canvas id="canvas"></canvas>
     <script>
-      const num = 10000;
+      const num = 15000;
       const canvas = document.getElementById("canvas");
       const width = canvas.width = 960;
       const height = canvas.height = 600;
+      const diagDist = Math.sqrt(width*width + height*height);
       const ctx = canvas.getContext("2d");
 
-      let particles = d3.range(num).map(i => (
-        [Math.round(width * Math.random()), Math.round(height * Math.random())]
-      ));
+      const colorScale = d3.scaleLinear()
+        .domain([0, 100])
+        .range(["blue", "orange"]);
+
+      let particles = d3.range(num).map(i => {
+        let x = Math.round(width * Math.random());
+        let y = Math.round(height * Math.random());
+        return [ x, y, x, y ];
+      });
 
       d3.timer(step);
 
       function step() {
-        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
         ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = "rgba(0, 0, 140, 0.5)";
         particles.forEach(p => {
           p[0] += Math.round(Math.random() * 2) - 1;
           p[1] += Math.round(Math.random() * 2) - 1;
-          if (p[0] < 0) p[0] = width;
-          if (p[0] > width) p[0] = 0;
-          if (p[1] < 0) p[1] = height;
-          if (p[1] > height) p[1] = 0;
+          if (p[0] < 0) p[0] = 0;
+          if (p[0] > width) p[0] = width;
+          if (p[1] < 0) p[1] = 0;
+          if (p[1] > height) p[1] = height;
           drawpoint(p);
         });
       }
 
       function drawpoint(p) {
-        ctx.fillRect(p[0], p[1], Math.ceil(Math.random() * 2), Math.ceil(Math.random() * 2));
+        const difX = p[2] - p[0];
+        const difY = p[3] - p[1];
+        ctx.fillStyle = colorScale(Math.sqrt(difX*difX + difY*difY));
+        ctx.fillRect(p[0], p[1], 2, 2);
       }
     </script>
   </body>

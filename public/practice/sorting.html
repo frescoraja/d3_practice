@@ -82,8 +82,8 @@
           .range([-40, 40]);
 
         const colorScale = d3.scaleLinear()
-          .domain([-24, 0, 24])
-          .range(["red", "#1d7e9c", "white"]);
+          .domain([-(n - 1), 0, (n - 1)])
+          .range(["white", "#1d7e9c", "red"]);
 
         const p = d3.select("#bubblesort");
 
@@ -254,8 +254,8 @@
           .range([-40, 40]);
 
         const colorScale = d3.scaleLinear()
-          .domain([-24, 0, 24])
-          .range(["red", "#c09e6a", "white"])
+          .domain([-(n - 1), 0, (n - 1)])
+          .range(["white", "#c09e6a", "red"])
 
         const p = d3.select("#quicksort");
 
